@@ -238,3 +238,82 @@ export function payPeriodWindow(date) {
   }
   return { start: addDays(thisPay, 1), end: nextPay };
 }
+
+/* -------------------------------------------------------------------------- */
+/* Aggregation                                                                */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * @typedef {Object} WorkRecord
+ * @property {string} id
+ * @property {string} date     "YYYY-MM-DD"
+ * @property {string} clockIn  "HH:MM"
+ * @property {string|null} clockOut "HH:MM" or null when in-progress
+ */
+
+/**
+ * Worked minutes for a single record. Returns null when the record is
+ * in-progress (no clock-out) or somehow invalid, so callers can distinguish
+ * "no value yet" from a genuine zero.
+ * @param {WorkRecord} record
+ * @returns {number|null}
+ */
+export function dailyMinutes(record) {
+  if (!record || !record.clockOut) {
+    return null;
+  }
+  const start = parseHHMM(record.clockIn);
+  const end = parseHHMM(record.clockOut);
+  if (end <= start) {
+    return null; // Defensive: validation rejects this on input.
+  }
+  return end - start;
+}
+
+/**
+ * Records whose date falls within [startDate, endDate] inclusive.
+ * @param {WorkRecord[]} records
+ * @param {Date} startDate local midnight
+ * @param {Date} endDate   local midnight
+ * @returns {WorkRecord[]}
+ */
+export function recordsInRange(records, startDate, endDate) {
+  const lo = startDate.getTime();
+  const hi = endDate.getTime();
+  return records.filter((r) => {
+    const t = fromISODate(r.date).getTime();
+    return t >= lo && t <= hi;
+  });
+}
+
+/**
+ * Sum of completed daily minutes across a set of records (nulls count as 0).
+ * @param {WorkRecord[]} records
+ * @returns {number}
+ */
+export function sumMinutes(records) {
+  return records.reduce((total, r) => total + (dailyMinutes(r) || 0), 0);
+}
+
+/**
+ * Total worked minutes for the Monday-to-Sunday week containing `refDate`.
+ * @param {WorkRecord[]} records
+ * @param {Date} refDate
+ * @returns {number}
+ */
+export function weeklyTotalMinutes(records, refDate) {
+  const weekStart = startOfWeekMonday(refDate);
+  const weekEnd = addDays(weekStart, 6);
+  return sumMinutes(recordsInRange(records, weekStart, weekEnd));
+}
+
+/**
+ * Total worked minutes for the pay period containing `refDate`.
+ * @param {WorkRecord[]} records
+ * @param {Date} refDate
+ * @returns {number}
+ */
+export function payPeriodTotalMinutes(records, refDate) {
+  const { start, end } = payPeriodWindow(refDate);
+  return sumMinutes(recordsInRange(records, start, end));
+}
