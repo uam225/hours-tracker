@@ -102,3 +102,139 @@ export function nowHHMM() {
   return `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
 }
 
+/* -------------------------------------------------------------------------- */
+/* Calendar-date helpers (all anchored to LOCAL midnight)                     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Strip the time component, returning a new Date at local midnight. Used before
+ * any date comparison so two dates differing only by time-of-day compare equal.
+ * @param {Date} date
+ * @returns {Date}
+ */
+export function atMidnight(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+/**
+ * Add (or subtract) whole days. Relies on the Date constructor normalising
+ * out-of-range day numbers, so month and year roll over correctly.
+ * @param {Date} date
+ * @param {number} days
+ * @returns {Date}
+ */
+export function addDays(date, days) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
+}
+
+/**
+ * Format a Date as "YYYY-MM-DD" from its LOCAL components.
+ * @param {Date} date
+ * @returns {string}
+ */
+export function toISODate(date) {
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+}
+
+/**
+ * Parse a "YYYY-MM-DD" string to a Date at LOCAL midnight.
+ * @param {string} iso
+ * @returns {Date}
+ */
+export function fromISODate(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+/** @returns {string} Today's date as "YYYY-MM-DD" in local time. */
+export function todayISO() {
+  return toISODate(new Date());
+}
+
+/**
+ * Long weekday name for an ISO date string (e.g. "2026-04-24" -> "Friday").
+ * @param {string} iso
+ * @returns {string}
+ */
+export function weekdayLongFromISO(iso) {
+  return WEEKDAYS_LONG[fromISODate(iso).getDay()];
+}
+
+/**
+ * Human-friendly display date, British day-month-year (e.g. "Fri 24 Apr 2026").
+ * @param {string} iso
+ * @returns {string}
+ */
+export function displayDateFromISO(iso) {
+  const d = fromISODate(iso);
+  return `${WEEKDAYS_SHORT[d.getDay()]} ${d.getDate()} ${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+/**
+ * Short display date without year (e.g. "24 Apr"). Used for compact range
+ * labels such as the current pay-period window.
+ * @param {Date} date
+ * @returns {string}
+ */
+export function displayShort(date) {
+  return `${date.getDate()} ${MONTHS_SHORT[date.getMonth()]}`;
+}
+
+/**
+ * The Monday (local midnight) of the ISO-8601 week containing `date`.
+ * getDay() returns 0 for Sunday, so `(getDay() + 6) % 7` gives the number of
+ * days since Monday (Mon -> 0, Sun -> 6), which we subtract.
+ * @param {Date} date
+ * @returns {Date}
+ */
+export function startOfWeekMonday(date) {
+  const base = atMidnight(date);
+  const daysSinceMonday = (base.getDay() + 6) % 7;
+  return addDays(base, -daysSinceMonday);
+}
+
+/**
+ * The last Friday of a given month, at local midnight.
+ * We take day 0 of the following month (which the Date constructor resolves to
+ * the last day of THIS month), then walk back to the most recent Friday.
+ * @param {number} year
+ * @param {number} monthIndex 0..11
+ * @returns {Date}
+ */
+export function lastFridayOfMonth(year, monthIndex) {
+  const lastDay = new Date(year, monthIndex + 1, 0);
+  const backToFriday = (lastDay.getDay() - FRIDAY + 7) % 7;
+  return new Date(year, monthIndex, lastDay.getDate() - backToFriday);
+}
+
+/**
+ * The pay-period window containing `date`.
+ *
+ * Rule (confirmed in Phase A): pay day P is the last Friday of the month. A
+ * period ENDS on its pay day and BEGINS the day after the previous pay day, so
+ * the window is the half-open-then-closed interval (previous pay day, P].
+ *
+ * If `date` falls on or before this month's pay day, the period ends on it.
+ * Otherwise `date` sits in the days after this month's pay day, which belong to
+ * NEXT month's period. Previous/next month are derived via day-1 Date
+ * construction so year boundaries are handled automatically.
+ *
+ * @param {Date} date
+ * @returns {{ start: Date, end: Date }} both at local midnight; `end` is the pay day
+ */
+export function payPeriodWindow(date) {
+  const ref = atMidnight(date);
+  const y = ref.getFullYear();
+  const m = ref.getMonth();
+
+  const thisPay = lastFridayOfMonth(y, m);
+  const prevMonth = new Date(y, m - 1, 1);
+  const nextMonth = new Date(y, m + 1, 1);
+  const prevPay = lastFridayOfMonth(prevMonth.getFullYear(), prevMonth.getMonth());
+  const nextPay = lastFridayOfMonth(nextMonth.getFullYear(), nextMonth.getMonth());
+
+  if (ref.getTime() <= thisPay.getTime()) {
+    return { start: addDays(prevPay, 1), end: thisPay };
+  }
+  return { start: addDays(thisPay, 1), end: nextPay };
+}
