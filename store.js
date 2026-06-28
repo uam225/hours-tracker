@@ -107,3 +107,90 @@ export function getRecord(date) {
   return loadRecords().find((r) => r.date === date) || null;
 }
 
+/**
+ * Validate the fields a user is allowed to supply. Throws on the first problem
+ * with a message intended for direct display.
+ * @param {string} date
+ * @param {string} clockIn
+ * @param {string|null} clockOut
+ */
+function validateInput(date, clockIn, clockOut) {
+  if (!isValidISODate(date)) {
+    throw new Error('That date is not valid.');
+  }
+  if (!isValidHHMM(clockIn)) {
+    throw new Error('Enter a clock-in time.');
+  }
+  if (clockOut !== null) {
+    if (!isValidHHMM(clockOut)) {
+      throw new Error('That clock-out time is not valid.');
+    }
+    if (parseHHMM(clockOut) <= parseHHMM(clockIn)) {
+      throw new Error('Clock-out must be later than clock-in. This app does not support overnight shifts.');
+    }
+  }
+}
+
+/** @returns {string} A collision-resistant id, preferring the platform UUID. */
+function generateId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/**
+ * Create or update the record for a date. The date is the unique key, so this
+ * upserts: an existing record for the same date is replaced in place (its id is
+ * preserved), which structurally prevents duplicate entries for one day.
+ * @param {{ date: string, clockIn: string, clockOut: string|null }} input
+ * @returns {import('./calc.js').WorkRecord} the saved record
+ */
+export function upsertRecord({ date, clockIn, clockOut }) {
+  const normalisedOut = clockOut ? clockOut : null;
+  validateInput(date, clockIn, normalisedOut);
+
+  const records = loadRecords();
+  const index = records.findIndex((r) => r.date === date);
+
+  if (index >= 0) {
+    const updated = { ...records[index], clockIn, clockOut: normalisedOut };
+    records[index] = updated;
+    saveRecords(records);
+    return updated;
+  }
+
+  const created = { id: generateId(), date, clockIn, clockOut: normalisedOut };
+  records.push(created);
+  saveRecords(records);
+  return created;
+}
+
+/**
+ * Delete the record for a date. A no-op if none exists.
+ * @param {string} date "YYYY-MM-DD"
+ */
+export function deleteRecord(date) {
+  const records = loadRecords().filter((r) => r.date !== date);
+  saveRecords(records);
+}
+
+/**
+ * Ask the browser to mark this origin's storage as persistent so iOS is less
+ * likely to evict it under storage pressure. Best-effort: support is partial
+ * and the request can be silently denied, so the result is informational only.
+ * @returns {Promise<boolean>} whether persistence is now granted
+ */
+export async function requestPersistentStorage() {
+  try {
+    if (navigator.storage && typeof navigator.storage.persist === 'function') {
+      if (typeof navigator.storage.persisted === 'function' && (await navigator.storage.persisted())) {
+        return true;
+      }
+      return await navigator.storage.persist();
+    }
+  } catch (err) {
+    console.error('Persistent-storage request failed:', err);
+  }
+  return false;
+}
