@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <!-- viewport-fit=cover lets the layout extend under the iPhone notch/home bar;
+         the CSS then pads with the safe-area insets. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Hours</title>
+    <meta name="description" content="Record clock-in and clock-out times and total hours." />
+
+    <!-- Installable PWA metadata. -->
+    <link rel="manifest" href="./manifest.json" />
+    <meta name="theme-color" content="#2563eb" />
+
+    <!-- iOS home-screen behaviour. -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Hours" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+    <link rel="icon" href="./icons/icon-192.png" />
+
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="app-header">
+        <h1 class="app-title">Hours</h1>
+      </header>
+
+      <!-- Status and error banner. Hidden until there is something to say. -->
+      <p id="message" class="message" role="status" aria-live="polite" hidden></p>
+
+      <!-- Today: clock in / clock out / edit. -->
+      <section id="today-card" class="card today" aria-label="Today"></section>
+
+      <!-- Live totals. -->
+      <section class="totals" aria-label="Totals">
+        <div class="stat">
+          <p class="stat-name">Today</p>
+          <p id="stat-today-hhmm" class="stat-value">00:00</p>
+          <p id="stat-today-dec" class="stat-sub">0.00 h</p>
+        </div>
+        <div class="stat">
+          <p class="stat-name">This week</p>
+          <p id="stat-week-hhmm" class="stat-value">00:00</p>
+          <p id="stat-week-dec" class="stat-sub">0.00 h</p>
+          <p id="week-range" class="stat-range"></p>
+        </div>
+        <div class="stat">
+          <p class="stat-name">This pay period</p>
+          <p id="stat-period-hhmm" class="stat-value">00:00</p>
+          <p id="stat-period-dec" class="stat-sub">0.00 h</p>
+          <p id="period-range" class="stat-range"></p>
+        </div>
+      </section>
+
+      <!-- Permanent controls. -->
+      <section class="actions">
+        <button id="btn-add" class="btn btn-secondary">Add entry</button>
+        <button id="btn-export" class="btn btn-secondary">Export CSV</button>
+      </section>
+
+      <!-- History. -->
+      <section class="history" aria-label="History">
+        <h2 class="section-title">History</h2>
+        <p id="history-empty" class="history-empty" hidden>No entries yet. Clock in, or add one manually.</p>
+        <ul id="history-list" class="history-list"></ul>
+      </section>
+    </main>
+
+    <!-- Add / edit modal. A plain overlay rather than a form element, so there
+         is no implicit submission; the buttons drive everything. -->
+    <div id="form-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="form-title">
+      <div class="modal-dialog">
+        <h2 id="form-title" class="modal-title">Add entry</h2>
+        <input type="hidden" id="form-mode" value="add" />
+
+        <label class="field">
+          <span class="field-label">Date</span>
+          <input type="date" id="field-date" class="field-input" />
+        </label>
+
+        <label class="field">
+          <span class="field-label">Clock in</span>
+          <input type="time" id="field-in" class="field-input" />
+        </label>
+
+        <label class="field">
+          <span class="field-label">Clock out <span class="field-optional">(leave blank if still working)</span></span>
+          <input type="time" id="field-out" class="field-input" />
+        </label>
+
+        <p id="form-error" class="form-error" role="alert" hidden></p>
+
+        <div class="modal-actions">
+          <button id="btn-cancel" class="btn btn-link">Cancel</button>
+          <button id="btn-save" class="btn btn-primary">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
