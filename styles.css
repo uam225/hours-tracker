@@ -1,0 +1,216 @@
+/*
+ * styles.css
+ * ----------------------------------------------------------------------------
+ * A deliberately quiet interface. The brief asks for something simple and
+ * basic, so the design spends its restraint on precise spacing, a single
+ * accent, and legible type rather than ornament. System fonts are used on
+ * purpose: they render natively on iOS (San Francisco), need no network, and
+ * keep the offline PWA self-contained.
+ *
+ * Colours are defined as tokens once, then themed for dark mode in a single
+ * media query. Selectors are kept shallow to avoid specificity clashes.
+ */
+
+:root {
+  --accent: #2563eb;
+  --accent-press: #1d4ed8;
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --text: #111827;
+  --muted: #6b7280;
+  --border: #e5e8ec;
+  --danger: #dc2626;
+  --danger-press: #b91c1c;
+
+  --radius: 14px;
+  --radius-sm: 10px;
+  --tap: 48px; /* minimum comfortable touch target */
+
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --accent: #3b82f6;
+    --accent-press: #2563eb;
+    --bg: #0f1419;
+    --surface: #1a2027;
+    --text: #e8eaed;
+    --muted: #98a2b0;
+    --border: #2a323b;
+    --danger: #f87171;
+    --danger-press: #ef4444;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  /* Keep the area behind the status bar consistent with the page. */
+  background: var(--bg);
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-text-size-adjust: 100%;
+  line-height: 1.4;
+}
+
+/* Respect the notch and home indicator. */
+.app {
+  max-width: 540px;
+  margin: 0 auto;
+  padding: 16px;
+  padding-top: max(16px, env(safe-area-inset-top));
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
+}
+
+.app-header {
+  margin-bottom: 16px;
+}
+
+.app-title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.section-title {
+  margin: 24px 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Messaging banner                                                           */
+/* -------------------------------------------------------------------------- */
+
+.message {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+}
+
+.message-info {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--surface));
+}
+
+.message-error {
+  background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, var(--surface));
+}
+
+/* -------------------------------------------------------------------------- */
+/* Cards                                                                      */
+/* -------------------------------------------------------------------------- */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+.today {
+  text-align: center;
+}
+
+.card-label {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.card-hint {
+  margin: 0 0 16px;
+  font-size: 16px;
+  color: var(--muted);
+}
+
+.card-status {
+  margin: 12px 0 0;
+  font-size: 16px;
+  color: var(--muted);
+}
+
+.card-total {
+  margin: 0;
+  font-size: 44px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.card-total-dec {
+  display: block;
+  margin-top: 2px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Totals                                                                     */
+/* -------------------------------------------------------------------------- */
+
+.totals {
+  margin-top: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.stat {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--border);
+}
+
+.stat:first-child {
+  border-top: none;
+}
+
+.stat-name {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.stat-range {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.stat-value {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-sub {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: right;
+}
+
