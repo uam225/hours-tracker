@@ -214,3 +214,256 @@ body {
   text-align: right;
 }
 
+/* -------------------------------------------------------------------------- */
+/* Buttons                                                                    */
+/* -------------------------------------------------------------------------- */
+
+.btn {
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  min-height: var(--tap);
+  cursor: pointer;
+  color: var(--text);
+  background: var(--surface);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-block {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+}
+
+.btn-primary:active {
+  background: var(--accent-press);
+  border-color: var(--accent-press);
+}
+
+.btn-secondary {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+.btn-secondary:active {
+  background: var(--bg);
+}
+
+.btn-link {
+  background: transparent;
+  border-color: transparent;
+  color: var(--accent);
+  min-height: 40px;
+  padding: 8px 12px;
+}
+
+.btn-small {
+  font-size: 14px;
+  font-weight: 600;
+  min-height: 36px;
+  padding: 6px 12px;
+  border-color: var(--border);
+}
+
+.btn-danger {
+  color: var(--danger);
+}
+
+.btn-danger:active {
+  color: var(--danger-press);
+}
+
+.btn:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.actions .btn {
+  flex: 1;
+}
+
+/* -------------------------------------------------------------------------- */
+/* History                                                                    */
+/* -------------------------------------------------------------------------- */
+
+.history-empty {
+  margin: 0;
+  padding: 20px;
+  text-align: center;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}
+
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.entry:first-child {
+  border-top: none;
+}
+
+.entry-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.entry-date {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.entry-times {
+  font-size: 14px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.entry-side {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-left: auto;
+}
+
+.entry-hours {
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.entry-actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Modal                                                                      */
+/* -------------------------------------------------------------------------- */
+
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 16px;
+  z-index: 50;
+}
+
+.modal.open {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-dialog {
+  width: 100%;
+  max-width: 420px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 20px;
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+}
+
+.modal-title {
+  margin: 0 0 16px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.field {
+  display: block;
+  margin-bottom: 14px;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.field-optional {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.field-input {
+  width: 100%;
+  /* 16px keeps iOS Safari from zooming the page when a field is focused. */
+  font-size: 16px;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  min-height: var(--tap);
+}
+
+.field-input:disabled {
+  color: var(--muted);
+  opacity: 1; /* normalise iOS dimming so a fixed date stays readable */
+}
+
+.field-input:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.form-error {
+  margin: 0 0 14px;
+  color: var(--danger);
+  font-size: 14px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Motion                                                                     */
+/* -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: no-preference) {
+  .btn {
+    transition: background-color 0.12s ease, border-color 0.12s ease;
+  }
+}
