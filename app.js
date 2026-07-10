@@ -234,3 +234,212 @@ function renderHistory(all) {
     list.append(li);
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/* Actions                                                                    */
+/* -------------------------------------------------------------------------- */
+
+function handleClockIn() {
+  try {
+    const today = todayISO();
+    upsertRecord({ date: today, clockIn: nowHHMM(), clockOut: null });
+    clearMessage();
+    render();
+  } catch (err) {
+    showMessage(err.message, 'error');
+  }
+}
+
+function handleClockOut() {
+  try {
+    const today = todayISO();
+    const rec = getRecord(today);
+    if (!rec || !rec.clockIn) {
+      showMessage('Clock in first.', 'error');
+      return;
+    }
+    const out = nowHHMM();
+    if (parseHHMM(out) <= parseHHMM(rec.clockIn)) {
+      showMessage('The current time is not after your clock-in. Open Edit times to set it manually.', 'error');
+      return;
+    }
+    upsertRecord({ date: today, clockIn: rec.clockIn, clockOut: out });
+    clearMessage();
+    render();
+  } catch (err) {
+    showMessage(err.message, 'error');
+  }
+}
+
+/**
+ * @param {'add'|'edit'} mode
+ * @param {string} [date]
+ */
+function openForm(mode, date) {
+  setFormError('');
+  el['form-mode'].value = mode;
+
+  if (mode === 'edit') {
+    const rec = getRecord(date);
+    if (!rec) {
+      showMessage('That entry no longer exists.', 'error');
+      return;
+    }
+    el['form-title'].textContent = 'Edit entry';
+    el['field-date'].value = rec.date;
+    el['field-date'].disabled = true;
+    el['form-modal'].dataset.date = rec.date; // Authoritative key while editing.
+    el['field-in'].value = rec.clockIn;
+    el['field-out'].value = rec.clockOut || '';
+  } else {
+    el['form-title'].textContent = 'Add entry';
+    el['field-date'].disabled = false;
+    el['field-date'].value = todayISO();
+    el['form-modal'].dataset.date = '';
+    el['field-in'].value = '';
+    el['field-out'].value = '';
+  }
+
+  el['form-modal'].classList.add('open');
+  el['field-in'].focus();
+}
+
+function closeForm() {
+  el['form-modal'].classList.remove('open');
+  setFormError('');
+}
+
+function handleSave() {
+  const mode = el['form-mode'].value;
+  // In edit mode the date input is disabled, so read the key from the modal
+  // dataset rather than the (intentionally non-editable) field.
+  const date = mode === 'edit' ? el['form-modal'].dataset.date : el['field-date'].value;
+  const clockIn = el['field-in'].value;
+  const clockOut = el['field-out'].value || null;
+
+  try {
+    if (mode === 'add' && getRecord(date)) {
+      setFormError('An entry already exists for that date. Close this and edit it from the list.');
+      return;
+    }
+    upsertRecord({ date, clockIn, clockOut });
+    closeForm();
+    clearMessage();
+    render();
+  } catch (err) {
+    setFormError(err.message);
+  }
+}
+
+/**
+ * @param {string} date
+ */
+function handleDelete(date) {
+  if (!window.confirm(`Delete the entry for ${displayDateFromISO(date)}?`)) {
+    return;
+  }
+  try {
+    deleteRecord(date);
+    clearMessage();
+    render();
+  } catch (err) {
+    showMessage(err.message, 'error');
+  }
+}
+
+function handleExport() {
+  try {
+    downloadCSV(getAllSorted());
+    showMessage('Export started. Save the file from the share sheet.', 'info');
+  } catch (err) {
+    showMessage(err.message, 'error');
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Event wiring                                                               */
+/* -------------------------------------------------------------------------- */
+
+function bindEvents() {
+  el['btn-add'].addEventListener('click', () => openForm('add'));
+  el['btn-export'].addEventListener('click', handleExport);
+  el['btn-save'].addEventListener('click', handleSave);
+  el['btn-cancel'].addEventListener('click', closeForm);
+
+  // Close the modal when the backdrop (but not the dialog) is tapped.
+  el['form-modal'].addEventListener('click', (e) => {
+    if (e.target === el['form-modal']) {
+      closeForm();
+    }
+  });
+
+  // Keyboard affordances inside the modal: Enter saves, Escape cancels.
+  el['form-modal'].addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSave();
+    } else if (e.key === 'Escape') {
+      closeForm();
+    }
+  });
+
+  // Delegated handler for the transient buttons in the today card and history.
+  document.body.addEventListener('click', (e) => {
+    const target = e.target.closest('[data-action]');
+    if (!target) {
+      return;
+    }
+    const { action, date } = target.dataset;
+    switch (action) {
+      case 'clock-in':
+        handleClockIn();
+        break;
+      case 'clock-out':
+        handleClockOut();
+        break;
+      case 'edit':
+        openForm('edit', date);
+        break;
+      case 'delete':
+        handleDelete(date);
+        break;
+      default:
+        break;
+    }
+  });
+}
+
+function registerServiceWorker() {
+  if ('serviceWorker' in navigator) {
+    // Registered after load so it never competes with first paint. A relative
+    // path is required so the app works under a GitHub Pages project subpath.
+    window.addEventListener('load', () => {
+      navigator.serviceWorker
+        .register('./service-worker.js')
+        .catch((err) => console.error('Service worker registration failed:', err));
+    });
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Init                                                                       */
+/* -------------------------------------------------------------------------- */
+
+function init() {
+  cacheElements();
+  bindEvents();
+  registerServiceWorker();
+
+  if (!isStorageAvailable()) {
+    // Hard failure: without storage the app cannot do its one job. Say so
+    // plainly rather than letting saves fail silently later.
+    showMessage('This browser is blocking local storage, so entries cannot be saved. Check your privacy settings.', 'error');
+  }
+
+  // Best-effort durability request; the outcome does not block the UI.
+  requestPersistentStorage();
+
+  render();
+}
+
+document.addEventListener('DOMContentLoaded', init);
