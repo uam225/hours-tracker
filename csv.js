@@ -21,6 +21,8 @@ import {
   weekdayLongFromISO,
   displayDateFromISO,
   todayISO,
+  recordsInRange,
+  sumMinutes,
 } from './calc.js';
 
 /**
@@ -144,15 +146,23 @@ export function downloadCSV(records) {
   if (!records || records.length === 0) {
     throw new Error('There are no entries to export yet.');
   }
+  downloadText(buildCSV(records), `hours-export-${todayISO()}.csv`);
+}
 
-  const text = buildCSV(records);
+/**
+ * Hand arbitrary CSV text to the browser as a file download. Shared by the full
+ * export and by the period send when the device cannot share files directly.
+ * @param {string} text
+ * @param {string} filename
+ */
+function downloadText(text, filename) {
   const blob = new Blob([text], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
 
   try {
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = `hours-export-${todayISO()}.csv`;
+    anchor.download = filename;
     document.body.appendChild(anchor);
     anchor.click();
     document.body.removeChild(anchor);
@@ -160,6 +170,118 @@ export function downloadCSV(records) {
     // Release the object URL on the next tick, after the click has been handled.
     setTimeout(() => URL.revokeObjectURL(url), 0);
   }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Single pay period: the monthly send                                        */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The filename used for a period export, keyed by pay day so successive months
+ * sort correctly and never overwrite one another.
+ * @param {{ start: Date, end: Date }} period
+ * @returns {string}
+ */
+export function periodFilename(period) {
+  return `hours-${toISODate(period.end)}.csv`;
+}
+
+/**
+ * Build the CSV for one pay period: a totals header identifying the period,
+ * followed by that period's daily rows.
+ *
+ * The full record set is passed in and scoped here rather than by the caller,
+ * so the header and the rows cannot disagree about which period they describe.
+ *
+ * @param {import('./calc.js').WorkRecord[]} allRecords
+ * @param {{ start: Date, end: Date }} period
+ * @returns {string}
+ */
+export function buildPeriodCSV(allRecords, period) {
+  const scoped = recordsInRange(allRecords, period.start, period.end).sort((a, b) =>
+    a.date.localeCompare(b.date),
+  );
+  const totalMinutes = sumMinutes(scoped);
+  const lines = [];
+
+  lines.push(row(['Hours: Pay Period']));
+  lines.push(row(['Period Start', toISODate(period.start)]));
+  lines.push(row(['Pay Day', toISODate(period.end)]));
+  lines.push(row(['Total (HH:MM)', formatMinutesHHMM(totalMinutes)]));
+  lines.push(row(['Total (decimal)', minutesToDecimal(totalMinutes)]));
+  lines.push(row(['Days Worked', String(scoped.length)]));
+
+  lines.push(row([]));
+  lines.push(row(['Daily Hours']));
+  lines.push(row(['Date', 'Weekday', 'Clock In', 'Clock Out', 'Hours (HH:MM)', 'Hours (decimal)']));
+  for (const r of scoped) {
+    const minutes = dailyMinutes(r);
+    const complete = minutes !== null;
+    lines.push(
+      row([
+        r.date,
+        weekdayLongFromISO(r.date),
+        r.clockIn,
+        r.clockOut || '',
+        complete ? formatMinutesHHMM(minutes) : '',
+        complete ? minutesToDecimal(minutes) : '',
+      ]),
+    );
+  }
+
+  return lines.join('\r\n');
+}
+
+/**
+ * Attach the period CSV to the iOS share sheet so it can be sent by email.
+ *
+ * IMPORTANT: this must be called synchronously from within a tap handler, and
+ * nothing may be awaited before `navigator.share` is invoked. Safari treats the
+ * share as requiring transient user activation, and an intervening await ends
+ * that activation, causing the call to be rejected. The file is therefore built
+ * synchronously here and the returned promise is handed back to the caller
+ * rather than awaited internally.
+ *
+ * Falls back to a plain download when the device will not share files, so the
+ * feature degrades rather than failing.
+ *
+ * @param {import('./calc.js').WorkRecord[]} allRecords
+ * @param {{ start: Date, end: Date }} period
+ * @returns {Promise<'shared'|'cancelled'|'downloaded'>}
+ * @throws {Error} synchronously when the period contains no entries
+ */
+export function sharePeriodCSV(allRecords, period) {
+  const scoped = recordsInRange(allRecords, period.start, period.end);
+  if (scoped.length === 0) {
+    throw new Error('There are no entries in that pay period to send.');
+  }
+
+  const text = buildPeriodCSV(allRecords, period);
+  const filename = periodFilename(period);
+  const label = `Hours ${toISODate(period.start)} to ${toISODate(period.end)}`;
+
+  // File support is not universal; guard both the constructor and canShare.
+  if (typeof File === 'function' && navigator.canShare) {
+    const file = new File([text], filename, { type: 'text/csv' });
+    if (navigator.canShare({ files: [file] })) {
+      return navigator
+        .share({ files: [file], title: label, text: label })
+        .then(() => 'shared')
+        .catch((err) => {
+          // Dismissing the share sheet is a normal outcome, not a failure.
+          if (err && err.name === 'AbortError') {
+            return 'cancelled';
+          }
+          // Anything else: still get the file to the user.
+          console.error('Share failed, falling back to download:', err);
+          downloadText(text, filename);
+          return 'downloaded';
+        });
+    }
+  }
+
+  downloadText(text, filename);
+  return Promise.resolve('downloaded');
 }
 
 // Re-exported so the UI can show a friendly date in the export confirmation

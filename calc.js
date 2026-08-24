@@ -239,6 +239,39 @@ export function payPeriodWindow(date) {
   return { start: addDays(thisPay, 1), end: nextPay };
 }
 
+/**
+ * The most recently CLOSED pay period relative to `date`, that is, the period
+ * ending at the latest pay day on or before `date`.
+ *
+ * This differs from payPeriodWindow, which returns the period CONTAINING the
+ * date. The distinction matters for the monthly send: on the pay day itself
+ * both agree, but on the following Monday payPeriodWindow would return the
+ * period that has just begun (nearly empty), whereas this returns the closed
+ * period that is actually due to be sent. It therefore tolerates a send that
+ * runs late by anything up to a month.
+ *
+ * @param {Date} date
+ * @returns {{ start: Date, end: Date }} both at local midnight; `end` is the pay day
+ */
+export function mostRecentClosedPayPeriod(date) {
+  const ref = atMidnight(date);
+  let end = lastFridayOfMonth(ref.getFullYear(), ref.getMonth());
+
+  // If this month's pay day has not arrived yet, the last closed period ended
+  // with the previous month's pay day.
+  if (end.getTime() > ref.getTime()) {
+    const prevMonth = new Date(ref.getFullYear(), ref.getMonth() - 1, 1);
+    end = lastFridayOfMonth(prevMonth.getFullYear(), prevMonth.getMonth());
+  }
+
+  // The period opens the day after the preceding pay day. Deriving the previous
+  // month via day-1 Date construction handles the January rollover.
+  const monthBeforeEnd = new Date(end.getFullYear(), end.getMonth() - 1, 1);
+  const prevPay = lastFridayOfMonth(monthBeforeEnd.getFullYear(), monthBeforeEnd.getMonth());
+
+  return { start: addDays(prevPay, 1), end };
+}
+
 /* -------------------------------------------------------------------------- */
 /* Aggregation                                                                */
 /* -------------------------------------------------------------------------- */
