@@ -298,6 +298,35 @@ body {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Monthly send card                                                          */
+/* -------------------------------------------------------------------------- */
+
+.send-card {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.send-range {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.send-total {
+  margin: 2px 0 12px;
+  font-size: 14px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Disabled controls must read as unavailable rather than merely faint. */
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* -------------------------------------------------------------------------- */
 /* History                                                                    */
 /* -------------------------------------------------------------------------- */
 

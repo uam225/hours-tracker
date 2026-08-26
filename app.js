@@ -41,9 +41,12 @@ import {
   startOfWeekMonday,
   weeklyTotalMinutes,
   payPeriodTotalMinutes,
+  mostRecentClosedPayPeriod,
+  recordsInRange,
+  sumMinutes,
 } from './calc.js';
 
-import { downloadCSV } from './csv.js';
+import { downloadCSV, sharePeriodCSV } from './csv.js';
 
 /* -------------------------------------------------------------------------- */
 /* Element references                                                         */
@@ -59,6 +62,7 @@ function cacheElements() {
     'stat-week-hhmm', 'stat-week-dec', 'week-range',
     'stat-period-hhmm', 'stat-period-dec', 'period-range',
     'btn-add', 'btn-export',
+    'send-range', 'send-total', 'btn-send-period',
     'history-list', 'history-empty',
     'form-modal', 'form-title', 'field-date', 'field-in', 'field-out',
     'form-error', 'form-mode', 'btn-save', 'btn-cancel',
@@ -101,7 +105,28 @@ function render() {
   const all = getAllSorted();
   renderTodayCard(today, getRecord(today));
   renderTotals(all, today);
+  renderSendCard(all);
   renderHistory(all);
+}
+
+/**
+ * Show which pay period the send button will actually attach, so a wrong
+ * period (for example after a very late send) is visible before it goes.
+ * @param {import('./calc.js').WorkRecord[]} all
+ */
+function renderSendCard(all) {
+  const period = mostRecentClosedPayPeriod(new Date());
+  const scoped = recordsInRange(all, period.start, period.end);
+  const minutes = sumMinutes(scoped);
+
+  el['send-range'].textContent = `${displayShort(period.start)} to ${displayShort(period.end)}`;
+  el['send-total'].textContent =
+    scoped.length === 0
+      ? 'No entries in this period'
+      : `${formatMinutesHHMM(minutes)} (${minutesToDecimal(minutes)} h) over ${scoped.length} ${scoped.length === 1 ? 'day' : 'days'}`;
+
+  // Nothing to attach means nothing to send.
+  el['btn-send-period'].disabled = scoped.length === 0;
 }
 
 /**
@@ -347,6 +372,36 @@ function handleDelete(date) {
   }
 }
 
+/**
+ * Send the most recently closed pay period as a CSV attachment.
+ *
+ * Deliberately NOT an async function. Safari requires navigator.share to be
+ * reached within the user activation from the tap, and an await before it would
+ * end that activation and cause the share to be rejected. The work is done
+ * synchronously and the resulting promise is handled with .then.
+ */
+function handleSendPeriod() {
+  const period = mostRecentClosedPayPeriod(new Date());
+  try {
+    sharePeriodCSV(getAllSorted(), period)
+      .then((outcome) => {
+        if (outcome === 'shared') {
+          showMessage('Sent to the share sheet. Choose Mail to email it.', 'info');
+        } else if (outcome === 'downloaded') {
+          showMessage('This device cannot attach files directly. The file has been saved, so attach it to an email yourself.', 'info');
+        } else {
+          clearMessage(); // Cancelled: say nothing.
+        }
+      })
+      .catch((err) => {
+        console.error('Period send failed:', err);
+        showMessage('Could not send the file. Use Export CSV instead.', 'error');
+      });
+  } catch (err) {
+    showMessage(err.message, 'error');
+  }
+}
+
 function handleExport() {
   try {
     downloadCSV(getAllSorted());
@@ -363,6 +418,7 @@ function handleExport() {
 function bindEvents() {
   el['btn-add'].addEventListener('click', () => openForm('add'));
   el['btn-export'].addEventListener('click', handleExport);
+  el['btn-send-period'].addEventListener('click', handleSendPeriod);
   el['btn-save'].addEventListener('click', handleSave);
   el['btn-cancel'].addEventListener('click', closeForm);
 

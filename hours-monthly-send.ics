@@ -1,0 +1,20 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Hours Tracker//Monthly Send Reminder//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:hours-tracker-monthly-send@umair-arshad.local
+DTSTAMP:20260826T000000Z
+DTSTART:20260828T164500
+DTEND:20260828T170000
+RRULE:FREQ=MONTHLY;BYDAY=-1FR
+SUMMARY:Send hours for this pay period
+DESCRIPTION:Open the Hours app and tap Attach and email to send the pay period that ends today.
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:Send hours for this pay period
+TRIGGER:PT0S
+END:VALARM
+END:VEVENT
+END:VCALENDAR

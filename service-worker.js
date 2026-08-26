@@ -12,7 +12,7 @@
  * Bump CACHE_NAME on any asset change so old caches are replaced on activate.
  */
 
-const CACHE_NAME = 'hours-tracker-v1';
+const CACHE_NAME = 'hours-tracker-v2';
 
 const ASSETS = [
   './',
